@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#6d28d9">
+<title>Cortes Maite - Gestión Total v9</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--p:#6d28d9;--bg:#f8fafc;--card:#fff;--txt:#0f172a;--red:#ef4444;--grn:#10b981;--yel:#f59e0b;--blu:#3b82f6;--sh:0 4px 12px rgba(0,0,0,0.06)}
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif}
+body{background:var(--bg);color:var(--txt);padding-bottom:75px}
+header{background:var(--p);color:#fff;padding:0.8rem 1rem;text-align:center;position:sticky;top:0;z-index:100;box-shadow:var(--sh)}
+#global-search{width:100%;max-width:400px;margin:0.5rem auto 0;padding:0.6rem;border-radius:20px;border:2px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;font-size:0.9rem;text-align:center}
+#global-search::placeholder{color:rgba(255,255,255,0.7)}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e2e8f0;display:flex;justify-content:space-around;padding:0.5rem;z-index:100}
+nav button{background:none;border:none;font-size:0.65rem;display:flex;flex-direction:column;align-items:center;color:#64748b;cursor:pointer;padding:0.3rem;width:20%}
+nav button.active{color:var(--p);font-weight:700}
+nav button span{font-size:1.3rem;margin-bottom:0.1rem}
+main{padding:1rem;max-width:900px;margin:auto}
+.card{background:var(--card);border-radius:14px;padding:1.2rem;margin-bottom:1rem;box-shadow:var(--sh)}
+.card h2{margin-bottom:0.8rem;color:var(--p);font-size:1.1rem;display:flex;align-items:center;gap:0.4rem}
+.kpi-row{display:grid;grid-template-columns:repeat(2,1fr);gap:0.8rem;margin-bottom:1rem}
+.kpi-card{padding:1rem;border-radius:12px;text-align:center;color:#fff;position:relative;overflow:hidden}
+.kpi-card h3{font-size:1.5rem;margin-bottom:0.1rem;z-index:2;position:relative}
+.kpi-card p{font-size:0.75rem;opacity:0.9;z-index:2;position:relative}
+.kpi-purple{background:linear-gradient(135deg,#7c3aed,#6d28d9)}
+.kpi-green{background:linear-gradient(135deg,#10b981,#059669)}
+.kpi-blue{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+.kpi-red{background:linear-gradient(135deg,#ef4444,#dc2626)}
+.section-grid{display:grid;grid-template-columns:1fr;gap:1rem}
+@media(min-width:600px){.section-grid{grid-template-columns:1fr 1fr}}
+.list-item{display:flex;justify-content:space-between;align-items:center;padding:0.8rem;background:#f8fafc;border-radius:8px;margin-bottom:0.5rem;border-left:4px solid var(--p)}
+.list-item.alert{border-left-color:var(--red);background:#fef2f2}
+.list-item strong{font-size:0.9rem}
+.list-item span{font-size:0.8rem;color:#64748b}
+.chart-container{position:relative;height:220px;width:100%}
+table{width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:0.5rem}
+th,td{padding:0.6rem 0.4rem;text-align:left;border-bottom:1px solid #e2e8f0}
+th{background:#f1f5f9;font-weight:600}
+.badge{padding:0.25rem 0.5rem;border-radius:99px;font-size:0.7rem;font-weight:600;display:inline-block}
+.badge.ok{background:#d1fae5;color:#059669}.badge.low{background:#fee2e2;color:#dc2626}
+#toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:0.8rem 1.2rem;border-radius:8px;z-index:200;opacity:0;transition:0.3s;pointer-events:none}
+#toast.show{opacity:1;top:70px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;margin-bottom:0.6rem}
+input,select,textarea{width:100%;padding:0.7rem;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.9rem;background:#f8fafc}
+button.btn{background:var(--p);color:#fff;border:none;padding:0.8rem;border-radius:8px;cursor:pointer;font-weight:600;width:100%;margin-top:0.4rem}
+button.btn.success{background:var(--grn)}.button.btn.danger{background:var(--red)}
+button.btn.info{background:var(--blu)}
+button.btn.sm{width:auto;padding:0.4rem 0.8rem;font-size:0.8rem;display:inline-block;margin:0.1rem}.hidden{display:none!important}
+.edit-mode{border:2px solid var(--yel);background:#fffbeb}
+.edit-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem}
+.edit-header h3{color:var(--yel);font-size:0.9rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>✂️ Cortes Maite</h1>
+  <input type="search" id="global-search" placeholder="🔍 Buscar producto, cliente...">
+</header>
+
+<main>
+  <!--  DASHBOARD -->
+  <section id="sec-almacen" class="section">
+    <div class="kpi-row">
+      <div class="kpi-card kpi-purple"><h3 id="d-val">$0</h3><p>Valor Almacén</p></div>
+      <div class="kpi-card kpi-green"><h3 id="d-ing">$0</h3><p>Ingreso Mes</p></div>
+      <div class="kpi-card kpi-blue"><h3 id="d-gan">$0</h3><p>Ganancia Neta</p></div>
+      <div class="kpi-card kpi-red"><h3 id="d-mar">0%</h3><p>Margen Prom.</p></div>
+    </div>
+    <div class="card">
+      <h2>📈 Tendencia Mensual</h2>
+      <div class="chart-container"><canvas id="chart-trend"></canvas></div>
+    </div>
+    <div class="section-grid">
+      <div class="card">
+        <h2> Alertas de Reposición</h2>
+        <div id="alert-list"><p style="color:#64748b;text-align:center;padding:1rem">✅ Todo en orden.</p></div>
+      </div>
+      <div class="card">
+        <h2>🔥 Top 5 Más Usados</h2>
+        <div id="top-prod-list"><p style="color:#64748b;text-align:center;padding:1rem">Sin datos.</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2> Resumen Hoy</h2>
+      <div id="day-summary"><p style="color:#64748b;text-align:center;padding:1rem">Sin servicios hoy.</p></div>
+    </div>
+    <div class="card">
+      <h2>📦 Inventario</h2>
+      <div style="overflow-x:auto">
+        <table><thead><tr><th>Producto</th><th>Stock</th><th>Valor $</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="lst-inv"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 📥 ENTRADAS -->
+  <section id="sec-entradas" class="section hidden">    <div class="card">
+      <h2>📥 Registrar Entrada</h2>
+      <div style="margin-bottom:0.8rem">
+        <label style="font-weight:600;display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+          <input type="checkbox" id="e-new" onchange="App.toggleNew()"> ¿Producto nuevo?
+        </label>
+      </div>
+      <div id="e-new-fields" class="hidden">
+        <div class="form-grid">
+          <input id="e-nombre" placeholder="Nombre">
+          <select id="e-tipo"><option value="">Tipo</option><option>Tinte</option><option>Shampoo</option><option>Acondicionador</option><option>Mascarilla</option><option>Oxigenada/Peróxido</option><option>Decolorante</option><option>Estilizado</option><option>Otro</option></select>
+          <input id="e-prov" placeholder="Proveedor">
+          <select id="e-und"><option value="onz">Onz</option><option value="ml">Ml</option><option value="uds">Unidades</option><option value="gr">Gramos</option></select>
+          <input id="e-min" type="number" placeholder="Stock mínimo" min="0" value="5">
+        </div>
+      </div>
+      <select id="e-prod-exist"><option value="">Seleccionar existente</option></select>
+      <div class="form-grid">
+        <input id="e-cant" type="number" placeholder="Cantidad" step="0.01" min="0">
+        <input id="e-precio" type="number" placeholder="Precio unitario ($)" step="0.01" min="0">
+        <input id="e-fecha" type="date">
+      </div>
+      <button class="btn success" onclick="App.addEntry()">💾 Registrar</button>
+    </div>
+    <div class="card">
+      <h2>📋 Historial de Lotes</h2>
+      <div id="lst-lotes"></div>
+    </div>
+  </section>
+
+  <!-- ✂️ SERVICIOS -->
+  <section id="sec-servicios" class="section hidden">
+    <div class="card" id="svc-form-card">
+      <div class="edit-header">
+        <h2>✂️ <span id="svc-title">Registrar Servicio</span></h2>
+        <button class="btn sm hidden" id="btn-cancel-edit" onclick="App.cancelEdit()"> Cancelar</button>
+      </div>
+      <input type="hidden" id="s-edit-id">
+      <div class="form-grid">
+        <input id="s-cliente" list="recent-clients" placeholder="Cliente">
+        <select id="s-servicio"><option value="">Servicio</option><option>Corte</option><option>Tinte completo</option><option>Mechas</option><option>Lavado+Secado</option><option>Tratamiento</option><option>Peinado</option><option>Otro</option></select>
+      </div>
+      <datalist id="recent-clients"></datalist>
+      <div style="margin:0.8rem 0;padding:0.8rem;background:#f0f9ff;border-radius:8px;border-left:4px solid var(--p)">
+        <strong style="color:var(--p)"> Productos usados:</strong>
+        <div id="svc-prods" style="margin-top:0.5rem"></div>
+        <button class="btn sm" onclick="App.addSvcProd()" style="margin-top:0.5rem">+ Agregar producto</button>
+        <div id="costo-resumen" style="margin-top:0.5rem;padding:0.5rem;background:#fff;border-radius:6px;display:none">
+          <strong>Costo total: <span id="costo-total-display" style="color:var(--red)">$0.00</span></strong>
+        </div>      </div>
+      <div class="form-grid">
+        <input id="s-ingreso" type="number" placeholder="Ingreso ($)" step="0.01" min="0">
+        <input id="s-fecha" type="date">
+      </div>
+      <input id="s-nota" placeholder="Notas..." style="margin-top:0.4rem">
+      <button class="btn success" id="btn-save-svc" onclick="App.saveSvc()">💾 Guardar y Descontar</button>
+    </div>
+    <div class="card">
+      <h2>📋 Servicios Recientes</h2>
+      <table><thead><tr><th>Fecha</th><th>Cliente</th><th>Servicio</th><th>Costo</th><th>Ingreso</th><th>Ganancia</th><th>Acciones</th></tr></thead>
+      <tbody id="lst-svc"></tbody></table>
+    </div>
+  </section>
+
+  <!-- 📈 ANÁLISIS -->
+  <section id="sec-analisis" class="section hidden">
+    <div class="card">
+      <h2>📈 Análisis Detallado</h2>
+      <div class="form-grid"><input id="a-desde" type="date"><input id="a-hasta" type="date"></div>
+      <select id="a-modo"><option value="producto">📦 Por Producto</option><option value="servicio">✂️ Por Servicio</option><option value="cliente">👤 Por Cliente</option></select>
+      <button class="btn" onclick="App.calcAnalysis()">🔍 Generar</button>
+      <div class="chart-container" style="margin-top:1rem"><canvas id="chart-analysis"></canvas></div>
+      <div id="a-detalle"></div>
+    </div>
+  </section>
+
+  <!-- ️ AJUSTES -->
+  <section id="sec-ajustes" class="section hidden">
+    <div class="card">
+      <h2>️ Administración</h2>
+      <p style="font-size:0.85rem;color:#64748b;margin-bottom:0.5rem">Gestión segura de datos.</p>
+      <button class="btn" onclick="App.loadDemo()"> Datos de Prueba</button>
+      <button class="btn danger" style="margin-top:0.5rem" onclick="App.reset()">️ Reiniciar Todo</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button class="active" onclick="App.nav('almacen',this)"><span></span>Dashboard</button>
+  <button onclick="App.nav('entradas',this)"><span>📥</span>Entradas</button>
+  <button onclick="App.nav('servicios',this)"><span>✂️</span>Servicios</button>
+  <button onclick="App.nav('analisis',this)"><span></span>Análisis</button>
+  <button onclick="App.nav('ajustes',this)"><span>⚙️</span>Ajustes</button>
+</nav>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const App={  charts:{trend:null,analysis:null},
+  editingSvcId:null,
+  DB:{
+    get(k){try{return JSON.parse(localStorage.getItem('cm_'+k)||'[]')}catch(e){return[]}},
+    set(k,v){try{localStorage.setItem('cm_'+k,JSON.stringify(v));return true}catch(e){App.toast('⚠️ Memoria llena');return false}},
+    id:()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6)
+  },
+
+  init(){
+    const t=new Date().toISOString().split('T')[0];
+    document.getElementById('e-fecha').value=t;document.getElementById('s-fecha').value=t;
+    const m=new Date(Date.now()-30*864e5).toISOString().split('T')[0];
+    document.getElementById('a-desde').value=m;document.getElementById('a-hasta').value=t;
+    this.renderAll();this.toast('✅ v9.0 - Edición total activada');
+  },
+
+  nav(sec,btn){
+    document.querySelectorAll('.section').forEach(s=>s.classList.add('hidden'));
+    document.getElementById('sec-'+sec).classList.remove('hidden');
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(sec==='almacen')this.renderDashboard();
+    if(sec==='entradas')this.renderLotes();
+    if(sec==='servicios'){this.renderSvcs();this.renderSelects();this.cancelEdit();}
+  },
+
+  toast(msg,dur=2500){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur)},
+
+  renderAll(){this.renderDashboard();this.renderLotes();this.renderSelects();this.renderSvcs();},
+  renderSelects(){
+    const p=this.DB.get('productos');
+    document.getElementById('e-prod-exist').innerHTML='<option value="">Seleccionar existente</option>'+p.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
+  },
+  toggleNew(){
+    document.getElementById('e-new-fields').classList.toggle('hidden',!document.getElementById('e-new').checked);
+    document.getElementById('e-prod-exist').disabled=document.getElementById('e-new').checked;
+  },
+
+  //  DASHBOARD
+  renderDashboard(){
+    const prods=this.DB.get('productos');
+    const lotes=this.DB.get('lotes').filter(l=>l.cant>0);
+    const svcs=this.DB.get('servicios');
+    const today=new Date().toISOString().split('T')[0];
+    const month=today.slice(0,7);
+    const monthSvcs=svcs.filter(s=>s.fecha.startsWith(month));
+    
+    const totalVal=lotes.reduce((s,l)=>s+l.total,0);
+    const totalIng=monthSvcs.reduce((s,x)=>s+x.ingreso,0);
+    const totalCos=monthSvcs.reduce((s,x)=>s+x.costoTotal,0);    const gan=totalIng-totalCos;
+    const marg=totalIng>0?(gan/totalIng*100):0;
+    
+    document.getElementById('d-val').textContent='$'+totalVal.toFixed(2);
+    document.getElementById('d-ing').textContent='$'+totalIng.toFixed(2);
+    document.getElementById('d-gan').textContent='$'+gan.toFixed(2);
+    document.getElementById('d-mar').textContent=marg.toFixed(1)+'%';
+
+    if(this.charts.trend) this.charts.trend.destroy();
+    const daysInMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+    const labels=Array.from({length:daysInMonth},(_,i)=>i+1);
+    const dataIng=labels.map(d=>monthSvcs.filter(s=>s.fecha.endsWith(`-${String(d).padStart(2,'0')}`)).reduce((s,x)=>s+x.ingreso,0));
+    const dataCos=labels.map(d=>monthSvcs.filter(s=>s.fecha.endsWith(`-${String(d).padStart(2,'0')}`)).reduce((s,x)=>s+x.costoTotal,0));
+    
+    this.charts.trend=new Chart(document.getElementById('chart-trend'),{
+      type:'line',
+      data:{labels,datasets:[{label:'Ingreso',data:dataIng,borderColor:'#10b981',tension:0.4,fill:false},{label:'Costo',data:dataCos,borderColor:'#ef4444',tension:0.4,fill:false}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+    });
+
+    const alertDiv=document.getElementById('alert-list');
+    const alerts=prods.filter(p=>lotes.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.cant,0)<=(p.min||5));
+    alertDiv.innerHTML=alerts.length?alerts.map(p=>{
+      const stock=lotes.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.cant,0);
+      return `<div class="list-item alert"><div><strong>${p.nombre}</strong><br><span>Stock: ${stock.toFixed(1)} ${p.und}</span></div><span class="badge low">Reponer</span></div>`;
+    }).join(''):'<p style="color:#10b981;text-align:center;padding:1rem">✅ Todo en orden.</p>';
+
+    const prodUsage={};
+    svcs.forEach(s=>s.usados.forEach(u=>{
+      const p=this.DB.get('productos').find(y=>y.id===u.bid?this.DB.get('lotes').find(l=>l.id===u.bid)?.pid:u.pid)||{nombre:'?'};
+      prodUsage[p.nombre]=(prodUsage[p.nombre]||0)+1;
+    }));
+    const topProds=Object.entries(prodUsage).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    document.getElementById('top-prod-list').innerHTML=topProds.length?topProds.map(([n,c],i)=>`<div class="list-item"><div><strong>#${i+1} ${n}</strong><br><span>Usado ${c} veces</span></div><span>🔥</span></div>`).join(''):'<p style="color:#64748b;text-align:center;padding:1rem">Sin datos.</p>';
+
+    const daySvcs=svcs.filter(s=>s.fecha===today);
+    document.getElementById('day-summary').innerHTML=daySvcs.length?daySvcs.map(s=>`<div class="list-item"><div><strong>${s.cliente}</strong><br><span>${s.servicio}</span></div><span class="badge ok">+$${s.ingreso}</span></div>`).join(''):'<p style="color:#64748b;text-align:center;padding:1rem">Sin servicios hoy.</p>';
+
+    const tbody=document.getElementById('lst-inv');
+    tbody.innerHTML='';
+    prods.forEach(p=>{
+      const stock=lotes.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.cant,0);
+      const valor=lotes.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.total,0);
+      const badge=stock<=(p.min||5)?'low':'ok';
+      tbody.innerHTML+=`<tr><td><strong>${p.nombre}</strong></td><td>${stock.toFixed(1)} ${p.und}</td><td>$${valor.toFixed(2)}</td><td><span class="badge ${badge}">${badge==='low'?'Bajo':'OK'}</span></td><td><button class="btn sm" onclick="App.editProd('${p.id}')">✏️</button> <button class="btn sm danger" onclick="App.delProd('${p.id}')">️</button></td></tr>`;
+    });
+  },
+
+  addEntry(){
+    const cant=parseFloat(document.getElementById('e-cant').value);    const precio=parseFloat(document.getElementById('e-precio').value);
+    const fecha=document.getElementById('e-fecha').value;
+    if(!cant||!precio||!fecha)return this.toast('⚠️ Completa datos');
+    let pid=document.getElementById('e-new').checked?null:document.getElementById('e-prod-exist').value;
+    if(!pid){
+      const nombre=document.getElementById('e-nombre').value.trim();
+      const tipo=document.getElementById('e-tipo').value;
+      const und=document.getElementById('e-und').value;
+      const min=parseFloat(document.getElementById('e-min').value)||5;
+      if(!nombre||!tipo)return this.toast('⚠️ Nombre y tipo obligatorios');
+      pid=this.DB.id();
+      const prods=this.DB.get('productos');prods.push({id:pid,nombre,tipo,prov:'',und,min});
+      this.DB.set('productos',prods);
+    }
+    const lote={id:this.DB.id(),pid,cant,precio,total:cant*precio,fecha,origen:document.getElementById('e-new').checked?'inicial':'compra'};
+    const lotes=this.DB.get('lotes');lotes.push(lote);this.DB.set('lotes',lotes);
+    document.getElementById('e-cant').value=document.getElementById('e-precio').value='';
+    this.renderAll();this.toast('✅ Entrada registrada');
+  },
+
+  renderLotes(){
+    const lotes=this.DB.get('lotes').filter(l=>l.cant>0);
+    const prods=this.DB.get('productos');
+    const box=document.getElementById('lst-lotes');
+    box.innerHTML=lotes.length===0?'<p style="text-align:center;color:#64748b">Sin lotes</p>':'';
+    lotes.slice().reverse().forEach(l=>{
+      const p=prods.find(x=>x.id===l.pid)||{nombre:'?',und:'uds'};
+      box.innerHTML+=`<div style="background:#f8fafc;padding:0.5rem;border-radius:8px;margin:0.3rem 0;display:flex;justify-content:space-between"><div><strong>${p.nombre}</strong><br><small>${l.fecha}</small></div><div><strong>${l.cant.toFixed(2)} ${p.und}</strong><br><small>$${l.precio.toFixed(2)}/ud</small><button class="btn sm" onclick="App.editLote('${l.id}')">✏️</button> <button class="btn sm danger" onclick="App.delLote('${l.id}')">️</button></div></div>`;
+    });
+  },
+
+  renderSvcs(){
+    const svcs=this.DB.get('servicios');
+    const tbody=document.getElementById('lst-svc');
+    tbody.innerHTML=svcs.length===0?'<tr><td colspan="7" style="text-align:center">Sin servicios</td></tr>':'';
+    svcs.slice().reverse().forEach(s=>{
+      const b=s.ganancia>=0?'ok':'low';
+      tbody.innerHTML+=`<tr><td>${s.fecha}</td><td>${s.cliente}</td><td>${s.servicio}</td><td>$${s.costoTotal.toFixed(2)}</td><td>$${s.ingreso.toFixed(2)}</td><td><span class="badge ${b}">$${s.ganancia.toFixed(2)}</span></td><td><button class="btn sm" onclick="App.editSvc('${s.id}')">✏️</button> <button class="btn sm danger" onclick="App.delSvc('${s.id}')">️</button></td></tr>`;
+    });
+  },
+
+  // ✏️ EDICIÓN COMPLETA
+  editLote(id){
+    const lotes=this.DB.get('lotes');const idx=lotes.findIndex(l=>l.id===id);if(idx===-1)return;
+    const nc=prompt('Cantidad:',lotes[idx].cant);const np=prompt('Precio ($):',lotes[idx].precio);
+    if(nc!==null&&np!==null){
+      lotes[idx].cant=Math.max(0,parseFloat(nc));lotes[idx].precio=Math.max(0,parseFloat(np));
+      lotes[idx].total=lotes[idx].cant*lotes[idx].precio;
+      this.DB.set('lotes',lotes);this.renderAll();this.toast('✅ Lote actualizado');
+    }  },
+  delLote(id){
+    const lotes=this.DB.get('lotes');const idx=lotes.findIndex(l=>l.id===id);if(idx===-1)return;
+    if(!confirm('¿Eliminar lote?'))return;
+    lotes.splice(idx,1);this.DB.set('lotes',lotes);this.renderAll();this.toast('️ Eliminado');
+  },
+  editProd(id){
+    const prods=this.DB.get('productos');const idx=prods.findIndex(x=>x.id===id);if(idx===-1)return;
+    const nn=prompt('Nombre:',prods[idx].nombre);const nt=prompt('Tipo:',prods[idx].tipo);const nm=prompt('Mín:',prods[idx].min||5);
+    if(nn!==null&&nt!==null&&nm!==null){
+      prods[idx].nombre=nn.trim()||prods[idx].nombre;prods[idx].tipo=nt.trim()||prods[idx].tipo;prods[idx].min=parseFloat(nm)||5;
+      this.DB.set('productos',prods);this.renderAll();this.toast('✅ Producto actualizado');
+    }
+  },
+  delProd(id){
+    if(!confirm('¿Eliminar producto y lotes?'))return;
+    this.DB.set('productos',this.DB.get('productos').filter(x=>x.id!==id));
+    this.DB.set('lotes',this.DB.get('lotes').filter(l=>l.pid!==id));
+    this.renderAll();this.toast('️ Eliminado');
+  },
+
+  // ✂️ EDITAR SERVICIO COMPLETO
+  editSvc(id){
+    const svc=this.DB.get('servicios').find(s=>s.id===id);
+    if(!svc)return;
+    this.editingSvcId=id;
+    
+    // Llenar formulario
+    document.getElementById('s-edit-id').value=id;
+    document.getElementById('s-cliente').value=svc.cliente;
+    document.getElementById('s-servicio').value=svc.servicio;
+    document.getElementById('s-ingreso').value=svc.ingreso;
+    document.getElementById('s-fecha').value=svc.fecha;
+    document.getElementById('s-nota').value=svc.nota||'';
+    
+    // Cambiar UI a modo edición
+    document.getElementById('svc-title').textContent='Editando Servicio';
+    document.getElementById('btn-save-svc').textContent='💾 Actualizar Servicio';
+    document.getElementById('btn-cancel-edit').classList.remove('hidden');
+    document.getElementById('svc-form-card').classList.add('edit-mode');
+    
+    // Cargar productos usados
+    document.getElementById('svc-prods').innerHTML='';
+    svc.usados.forEach(u=>{
+      this.addSvcProd();
+      const lastCard=document.getElementById('svc-prods').lastElementChild;
+      const prodSelect=lastCard.querySelector('.sp-prod');
+      const batchSelect=lastCard.querySelector('.sp-batch');
+      const cantInput=lastCard.querySelector('.sp-cant');
+            // Seleccionar producto y lote
+      const lote=this.DB.get('lotes').find(l=>l.id===u.bid);
+      const pid=lote?lote.pid:'';
+      prodSelect.value=pid;
+      this.renderBatches(lastCard.id);
+      batchSelect.value=u.bid;
+      cantInput.value=u.cant;
+      this.calcCost(lastCard.id);
+    });
+    
+    this.updateTotal();
+    document.getElementById('svc-form-card').scrollIntoView({behavior:'smooth'});
+    this.toast('✏️ Modo edición activado. Modifica y guarda para actualizar.');
+  },
+
+  cancelEdit(){
+    this.editingSvcId=null;
+    document.getElementById('s-edit-id').value='';
+    document.getElementById('s-cliente').value='';
+    document.getElementById('s-servicio').value='';
+    document.getElementById('s-ingreso').value='';
+    document.getElementById('s-nota').value='';
+    document.getElementById('svc-prods').innerHTML='';
+    document.getElementById('costo-resumen').style.display='none';
+    document.getElementById('svc-title').textContent='Registrar Servicio';
+    document.getElementById('btn-save-svc').textContent='💾 Guardar y Descontar';
+    document.getElementById('btn-cancel-edit').classList.add('hidden');
+    document.getElementById('svc-form-card').classList.remove('edit-mode');
+  },
+
+  addSvcProd(){
+    const box=document.getElementById('svc-prods');
+    const prods=this.DB.get('productos');const lotes=this.DB.get('lotes').filter(l=>l.cant>0);
+    if(lotes.length===0)return this.toast('⚠️ No hay stock.');
+    const cid='pc-'+Date.now();
+    let html=`<div class="card" style="padding:0.8rem;margin-top:0.5rem;background:#f8fafc" id="${cid}">
+      <div class="form-grid">
+        <select class="sp-prod" onchange="App.renderBatches('${cid}')"><option value="">Producto</option>
+        ${prods.map(p=>{const a=lotes.filter(l=>l.pid===p.id).reduce((s,l)=>s+l.cant,0);return a>0?`<option value="${p.id}">${p.nombre} (${a.toFixed(1)})</option>`:'';}).join('')}
+        </select>
+        <select class="sp-batch" onchange="App.calcCost('${cid}')"><option>Selecciona</option></select>
+      </div>
+      <div class="form-grid">
+        <input type="number" class="sp-cant" placeholder="Cantidad" step="0.01" min="0" onchange="App.calcCost('${cid}')">
+        <input type="text" class="sp-costo" placeholder="Costo ($)" disabled style="background:#e2e8f0">
+      </div>
+      <button class="btn sm danger" onclick="document.getElementById('${cid}').remove();App.updateTotal()">️ Quitar</button>
+    </div>`;
+    box.insertAdjacentHTML('beforeend',html);
+  },  renderBatches(cid){
+    const card=document.getElementById(cid);const sel=card.querySelector('.sp-prod');const bSel=card.querySelector('.sp-batch');
+    const pid=sel.value;if(!pid){bSel.innerHTML='<option>Selecciona</option>';return;}
+    const lotes=this.DB.get('lotes').filter(l=>l.pid===pid); // Mostrar todos los lotes para edición
+    bSel.innerHTML=lotes.map(l=>`<option value="${l.id}" data-pre="${l.precio}">${l.cant.toFixed(1)} | $${l.precio.toFixed(2)}</option>`).join('');
+    this.calcCost(cid);
+  },
+  calcCost(cid){
+    const card=document.getElementById(cid);if(!card)return;
+    const bSel=card.querySelector('.sp-batch');const cant=parseFloat(card.querySelector('.sp-cant').value)||0;
+    if(!bSel.value||!cant){card.querySelector('.sp-costo').value='$0.00';this.updateTotal();return;}
+    const precio=parseFloat(bSel.options[bSel.selectedIndex].dataset.pre)||0;
+    card.querySelector('.sp-costo').value='$'+(cant*precio).toFixed(2);
+    this.updateTotal();
+  },
+  updateTotal(){
+    let t=0;document.querySelectorAll('#svc-prods .card').forEach(c=>{const v=c.querySelector('.sp-costo')?.value.replace('$','');if(v)t+=parseFloat(v)||0;});
+    const r=document.getElementById('costo-resumen');const d=document.getElementById('costo-total-display');
+    if(t>0){r.style.display='block';d.textContent='$'+t.toFixed(2);}else{r.style.display='none';}
+  },
+
+  saveSvc(){
+    const cl=document.getElementById('s-cliente').value.trim();const sr=document.getElementById('s-servicio').value;
+    const ig=parseFloat(document.getElementById('s-ingreso').value)||0;const ft=document.getElementById('s-fecha').value;
+    if(!cl||!sr||!ft)return this.toast('⚠️ Completa datos');
+    
+    const cards=document.querySelectorAll('#svc-prods .card');
+    const lotes=this.DB.get('lotes');const nuevosUsados=[];let nuevoCosT=0;
+    
+    for(const card of cards){
+      const bid=card.querySelector('.sp-batch').value;const cant=parseFloat(card.querySelector('.sp-cant').value)||0;
+      if(!bid||!cant)return this.toast('️ Completa productos');
+      const idx=lotes.findIndex(l=>l.id===bid);
+      if(idx===-1)return this.toast('⚠️ Lote no existe');
+      
+      // Si es edición, verificar stock disponible (stock actual + cantidad original de este servicio)
+      if(this.editingSvcId){
+        const oldSvc=this.DB.get('servicios').find(s=>s.id===this.editingSvcId);
+        const oldUsage=oldSvc.usados.find(u=>u.bid===bid);
+        const stockDisponible=lotes[idx].cant+(oldUsage?oldUsage.cant:0);
+        if(stockDisponible<cant)return this.toast(`⚠️ Stock insuficiente en lote ${bid.slice(0,4)}`);
+      }else{
+        if(lotes[idx].cant<cant)return this.toast(`⚠️ Stock insuficiente`);
+      }
+      
+      nuevosUsados.push({bid,cant,precio:lotes[idx].precio,costo:cant*lotes[idx].precio});
+      nuevoCosT+=cant*lotes[idx].precio;
+    }
+    
+    const svcs=this.DB.get('servicios');    
+    if(this.editingSvcId){
+      // 1. Devolver stock del servicio original
+      const oldSvc=svcs.find(s=>s.id===this.editingSvcId);
+      if(oldSvc){
+        oldSvc.usados.forEach(u=>{
+          const l=lotes.find(x=>x.id===u.bid);
+          if(l){l.cant+=u.cant;l.total=l.cant*l.precio;}
+        });
+      }
+      
+      // 2. Descontar nuevo stock
+      nuevosUsados.forEach(u=>{
+        const l=lotes.find(x=>x.id===u.bid);
+        if(l){l.cant-=u.cant;l.total=l.cant*l.precio;}
+      });
+      
+      // 3. Actualizar servicio
+      const idx=svcs.findIndex(s=>s.id===this.editingSvcId);
+      svcs[idx]={...oldSvc,cliente:cl,servicio:sr,fecha:ft,ingreso:ig,costoTotal:nuevoCosT,ganancia:ig-nuevoCosT,nota:document.getElementById('s-nota').value.trim(),usados:nuevosUsados};
+      this.DB.set('servicios',svcs);
+      this.toast('✅ Servicio actualizado correctamente');
+    }else{
+      // Nuevo servicio
+      nuevosUsados.forEach(u=>{
+        const l=lotes.find(x=>x.id===u.bid);
+        if(l){l.cant-=u.cant;l.total=l.cant*l.precio;}
+      });
+      const newSvc={id:this.DB.id(),cliente:cl,servicio:sr,fecha:ft,ingreso:ig,costoTotal:nuevoCosT,ganancia:ig-nuevoCosT,nota:document.getElementById('s-nota').value.trim(),usados:nuevosUsados};
+      svcs.push(newSvc);
+      this.DB.set('servicios',svcs);
+      this.toast(`✅ Servicio guardado | Ganancia: $${(ig-nuevoCosT).toFixed(2)}`);
+    }
+    
+    this.DB.set('lotes',lotes);
+    this.cancelEdit();
+    this.renderAll();
+  },
+
+  delSvc(id){
+    if(!confirm('¿Eliminar servicio y devolver stock?'))return;
+    const svcs=this.DB.get('servicios');const s=svcs.find(x=>x.id===id);if(!s)return;
+    const lts=this.DB.get('lotes');
+    s.usados.forEach(u=>{const l=lts.find(x=>x.id===u.bid);if(l){l.cant+=u.cant;l.total=l.cant*l.precio;}});
+    this.DB.set('lotes',lts);this.DB.set('servicios',svcs.filter(x=>x.id!==id));this.renderAll();this.toast('️ Servicio eliminado');
+  },
+
+  calcAnalysis(){
+    const de=document.getElementById('a-desde').value;const ha=document.getElementById('a-hasta').value;const mo=document.getElementById('a-modo').value;
+    if(!de||!ha)return this.toast('⚠️ Selecciona fechas');    const svcs=this.DB.get('servicios').filter(s=>s.fecha>=de&&s.fecha<=ha);
+    const cT=svcs.reduce((s,x)=>s+x.costoTotal,0);const iT=svcs.reduce((s,x)=>s+x.ingreso,0);
+    let gr={};
+    svcs.forEach(s=>{
+      if(mo==='producto'){
+        s.usados.forEach(u=>{const p=this.DB.get('productos').find(y=>y.id===u.bid?this.DB.get('lotes').find(l=>l.id===u.bid)?.pid:u.pid)||{nombre:'?'};
+        if(!gr[p.nombre])gr[p.nombre]={costo:0,ingreso:0};gr[p.nombre].costo+=u.costo;});
+        Object.keys(gr).forEach(k=>gr[k].ingreso=(cT>0)?(gr[k].costo/cT)*iT:0);
+      }else{const k=mo==='servicio'?s.servicio:s.cliente;if(!gr[k])gr[k]={costo:0,ingreso:0};gr[k].costo+=s.costoTotal;gr[k].ingreso+=s.ingreso;}
+    });
+    if(this.charts.analysis)this.charts.analysis.destroy();
+    const lb=Object.keys(gr);const dt=lb.map(l=>gr[l].ingreso-gr[l].costo);
+    this.charts.analysis=new Chart(document.getElementById('chart-analysis'),{type:'bar',data:{labels:lb,datasets:[{label:'Ganancia',data:dt,backgroundColor:dt.map(d=>d>=0?'#10b981':'#ef4444'),borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+    let det='<table><thead><tr><th>Item</th><th>Costo</th><th>Ingreso</th><th>Ganancia</th></tr></thead><tbody>';
+    Object.entries(gr).sort((a,b)=>b[1].ingreso-a[1].ingreso).forEach(([k,v])=>{
+      det+=`<tr><td>${k}</td><td>$${v.costo.toFixed(2)}</td><td>$${v.ingreso.toFixed(2)}</td><td>$${(v.ingreso-v.costo).toFixed(2)}</td></tr>`;
+    });
+    document.getElementById('a-detalle').innerHTML=det+'</tbody></table>';
+    this.toast('✅ Análisis listo');
+  },
+
+  loadDemo(){
+    if(this.DB.get('productos').length>0&&!confirm('¿Sobrescribir?'))return;
+    const t=new Date().toISOString().split('T')[0];
+    this.DB.set('productos',[{id:'p1',nombre:'Tinte Negro',tipo:'Tinte',und:'uds',min:5},{id:'p2',nombre:'Oxigenada',tipo:'Oxigenada',und:'onz',min:20}]);
+    this.DB.set('lotes',[{id:'l1',pid:'p1',cant:10,precio:10,total:100,fecha:t},{id:'l2',pid:'p2',cant:50,precio:2,total:100,fecha:t}]);
+    this.DB.set('servicios',[]);this.renderAll();this.toast(' Demo cargado');
+  },
+  reset(){if(!confirm('⚠️ ¿BORRAR TODO?'))return;localStorage.clear();this.renderAll();this.toast('️ Reiniciado')}
+};
+document.addEventListener('DOMContentLoaded',()=>App.init());
+</script>
+</body>
+</html>
